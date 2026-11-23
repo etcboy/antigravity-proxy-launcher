@@ -1,0 +1,30 @@
+﻿name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        shell: pwsh
+        run: ./build.ps1
+      - name: Test
+        shell: pwsh
+        run: ./tests/run-tests.ps1
+      - name: Package
+        shell: pwsh
+        run: ./package.ps1 -SkipBuild
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $assets = @(Get-ChildItem -LiteralPath ./dist -File | Select-Object -ExpandProperty FullName)
+          gh release create "$env:RELEASE_TAG" @assets --verify-tag --title "$env:RELEASE_TAG" --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw 'Release failed.' }

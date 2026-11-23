@@ -1,0 +1,26 @@
+﻿name: Build and test
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        shell: pwsh
+        run: ./build.ps1
+      - name: Test
+        shell: pwsh
+        run: ./tests/run-tests.ps1
+      - name: Package
+        shell: pwsh
+        run: ./package.ps1 -SkipBuild
+      - uses: actions/upload-artifact@v7
+        with:
+          name: antigravity-proxy-launcher-windows
+          path: dist/*

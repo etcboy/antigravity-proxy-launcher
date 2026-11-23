@@ -1,0 +1,12 @@
+﻿/dist/
+/.test-output/
+*.exe
+*.pdb
+*.user
+*.tmp
+*.settings.json
+settings.json
+.vs/
+.idea/
+Thumbs.db
+Desktop.ini
