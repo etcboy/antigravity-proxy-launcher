@@ -11,25 +11,18 @@ using System.Windows.Forms;
 using AntigravityProxyLauncher;
 class SmokeTests {
     static void Assert(bool value, string message) { if (!value) throw new Exception(message); }
-    static object OpenLink(string path, out object shell) {
-        Type type = Type.GetTypeFromProgID("WScript.Shell");
-        shell = Activator.CreateInstance(type);
-        return type.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { path });
-    }
     static string ReadLink(string path, string property) {
-        object shell; object link = OpenLink(path, out shell);
-        try { return (string)link.GetType().InvokeMember(property, BindingFlags.GetProperty, null, link, null); }
-        finally { Marshal.FinalReleaseComObject(link); Marshal.FinalReleaseComObject(shell); }
+        ShortcutInfo shortcut = NativeShortcut.Read(path);
+        if (property == "TargetPath") return shortcut.TargetPath;
+        if (property == "Arguments") return shortcut.Arguments;
+        if (property == "IconLocation") return shortcut.IconLocation;
+        throw new ArgumentException("Unknown shortcut property.");
     }
     static void ConflictLink(string path) {
         Directory.CreateDirectory(Path.GetDirectoryName(path));
-        object shell; object link = OpenLink(path, out shell);
-        try {
-            link.GetType().InvokeMember("TargetPath", BindingFlags.SetProperty, null, link, new object[] { Path.Combine(Environment.SystemDirectory, "notepad.exe") });
-            link.GetType().InvokeMember("Save", BindingFlags.InvokeMethod, null, link, null);
-        } finally { Marshal.FinalReleaseComObject(link); Marshal.FinalReleaseComObject(shell); }
-    }
-    [STAThread]
+        string target = Path.Combine(Environment.SystemDirectory, "notepad.exe");
+        NativeShortcut.Write(path, target, "", target, Environment.SystemDirectory, "Existing unrelated shortcut");
+    }    [STAThread]
     static void Main(string[] args) {
         try {
             if (args[0] == "silent") { SilentStart.Start(new SettingsStore(args[1], null)); return; }

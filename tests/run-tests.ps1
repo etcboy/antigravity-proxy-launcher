@@ -8,7 +8,7 @@ $fixture = Join-Path $repo ('.test-output\' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixture -Force | Out-Null
 & $compiler /nologo "/out:$fixture\ShortcutProbe.exe" "$PSScriptRoot\EnvironmentProbe.cs"
 if ($LASTEXITCODE -ne 0) { throw 'Probe compilation failed.' }
-& $compiler /nologo /utf8output /target:exe /main:SmokeTests /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Runtime.Serialization.dll "/win32manifest:$repo\assets\app.manifest" "/out:$fixture\SmokeTests.exe" "$repo\src\Launcher.cs" "$repo\src\Features.cs" "$PSScriptRoot\SmokeTests.cs"
+& $compiler /nologo /utf8output /target:exe /main:SmokeTests /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Runtime.Serialization.dll "/win32manifest:$repo\assets\app.manifest" "/out:$fixture\SmokeTests.exe" "$repo\src\Launcher.cs" "$repo\src\Features.cs" "$repo\src\NativeShortcut.cs" "$PSScriptRoot\SmokeTests.cs"
 if ($LASTEXITCODE -ne 0) { throw 'Smoke test compilation failed.' }
 & (Join-Path $fixture 'SmokeTests.exe') $fixture $sourceExecutable
 if ($LASTEXITCODE -ne 0) { throw 'Smoke tests failed.' }

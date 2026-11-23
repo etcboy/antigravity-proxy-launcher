@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
-using System.Runtime.InteropServices;
 
 namespace AntigravityProxyLauncher
 {
@@ -53,33 +51,17 @@ namespace AntigravityProxyLauncher
                 } finally { if (File.Exists(temporary)) File.Delete(temporary); }
             }
             store.Save(settings);
-            WriteShortcut(launchShortcut, installedExecutable, "--launch", application.FileName + ",0", application.WorkingDirectory, "使用已保存的代理配置启动 Antigravity");
-            WriteShortcut(settingsShortcut, installedExecutable, "--settings", installedExecutable + ",0", installDirectory, "修改 Antigravity 的程序位置和代理设置");
+            WriteShortcut(launchShortcut, installedExecutable, "--launch", application.FileName, application.WorkingDirectory, "使用已保存的代理配置启动 Antigravity");
+            WriteShortcut(settingsShortcut, installedExecutable, "--settings", installedExecutable, installDirectory, "修改 Antigravity 的程序位置和代理设置");
             return launchShortcut;
-        }
-
-        private static object CreateShortcutObject(string file, out object shell)
-        {
-            Type shellType = Type.GetTypeFromProgID("WScript.Shell");
-            if (shellType == null) throw new IOException("当前 Windows 无法创建快捷方式。");
-            shell = Activator.CreateInstance(shellType);
-            try { return shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { file }); }
-            catch { Marshal.FinalReleaseComObject(shell); throw; }
         }
 
         private static void CheckShortcutOwnership(string file, string target)
         {
             if (!File.Exists(file)) return;
-            object shell;
-            object shortcut = CreateShortcutObject(file, out shell);
-            try {
-                string existingTarget = (string)shortcut.GetType().InvokeMember("TargetPath", BindingFlags.GetProperty, null, shortcut, null);
-                if (!String.Equals(existingTarget, target, StringComparison.OrdinalIgnoreCase))
-                    throw new IOException("已有同名图标，但它不属于本工具。请先重命名该图标，再重新配置：" + Path.GetFileNameWithoutExtension(file));
-            } finally {
-                Marshal.FinalReleaseComObject(shortcut);
-                Marshal.FinalReleaseComObject(shell);
-            }
+            ShortcutInfo existing = NativeShortcut.Read(file);
+            if (!String.Equals(existing.TargetPath, target, StringComparison.OrdinalIgnoreCase))
+                throw new IOException("已有同名图标，但它不属于本工具。请先重命名该图标，再重新配置：" + Path.GetFileNameWithoutExtension(file));
         }
 
         private static void WriteShortcut(string file, string target, string arguments, string icon, string workingDirectory, string description)
@@ -87,20 +69,7 @@ namespace AntigravityProxyLauncher
             Directory.CreateDirectory(Path.GetDirectoryName(file));
             string temporary = Path.Combine(Path.GetDirectoryName(file), ".antigravity-" + Guid.NewGuid().ToString("N") + ".lnk");
             try {
-                object shell;
-                object shortcut = CreateShortcutObject(temporary, out shell);
-                try {
-                    Type type = shortcut.GetType();
-                    type.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { target });
-                    type.InvokeMember("Arguments", BindingFlags.SetProperty, null, shortcut, new object[] { arguments });
-                    type.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut, new object[] { icon });
-                    type.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { workingDirectory });
-                    type.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { description });
-                    type.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
-                } finally {
-                    Marshal.FinalReleaseComObject(shortcut);
-                    Marshal.FinalReleaseComObject(shell);
-                }
+                NativeShortcut.Write(temporary, target, arguments, icon, workingDirectory, description);
                 if (File.Exists(file)) File.Replace(temporary, file, null);
                 else File.Move(temporary, file);
             } finally { if (File.Exists(temporary)) File.Delete(temporary); }
