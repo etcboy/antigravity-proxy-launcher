@@ -49,7 +49,7 @@ class SmokeTests {
         string installed = Path.Combine(root, "app-data", "Antigravity-Proxy-Launcher.exe");
         string settingsLink = Path.Combine(programs, "Antigravity 代理设置.lnk");
         Assert(File.Exists(installed), "Managed launcher copy missing.");
-        Assert(String.Equals(ReadLink(launchLink, "TargetPath"), installed, StringComparison.OrdinalIgnoreCase), "Desktop target is incorrect.");
+        Assert(String.Equals(ReadLink(launchLink, "TargetPath"), installed, StringComparison.OrdinalIgnoreCase), "Desktop target is incorrect. Expected: " + installed + "; actual: " + ReadLink(launchLink, "TargetPath"));
         Assert(ReadLink(launchLink, "Arguments") == "--launch", "Desktop link is not silent.");
         Assert(ReadLink(settingsLink, "Arguments") == "--settings", "Settings entry is incorrect.");
         Assert(ReadLink(launchLink, "IconLocation").IndexOf("ShortcutProbe.exe", StringComparison.OrdinalIgnoreCase) >= 0, "Application icon missing.");
