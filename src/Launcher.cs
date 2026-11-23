@@ -13,8 +13,8 @@ using System.Reflection;
 
 [assembly: AssemblyTitle("Antigravity Proxy Launcher")]
 [assembly: AssemblyDescription("A local, per-process proxy launcher for Antigravity")]
-[assembly: AssemblyVersion("1.3.0.0")]
-[assembly: AssemblyFileVersion("1.3.0.0")]
+[assembly: AssemblyVersion("1.3.1.0")]
+[assembly: AssemblyFileVersion("1.3.1.0")]
 
 namespace AntigravityProxyLauncher
 {
@@ -219,7 +219,6 @@ namespace AntigravityProxyLauncher
         private readonly Button test = new Button();
         private readonly Button launch = new Button();
         private readonly Button save = new Button();
-        private readonly Button setup = new Button();
         private readonly Panel statusBox = new Panel();
         private readonly Label status = new Label();
         private readonly SettingsStore settingsStore = SettingsStore.ForCurrentUser();
@@ -249,7 +248,7 @@ namespace AntigravityProxyLauncher
             appPath.Text = settings.ApplicationPath;
             host.Text = settings.ProxyHost;
             port.Value = settings.ProxyPort;
-            ShowStatus(initialNotice ?? settingsNotice ?? "首次使用请填写连接设置，再点击“配置启动图标”。以后只需点击桌面图标。", false, initialNotice != null);
+            ShowStatus(initialNotice ?? settingsNotice ?? "准备就绪。可先测试代理连接，再点击“保存并启动”。", false, initialNotice != null);
         }
 
         private Label MakeLabel(Control parent, string text, int x, int y, int width, int height, Color color, float size, bool bold)
@@ -330,18 +329,16 @@ namespace AntigravityProxyLauncher
             status.AccessibleName = "连接状态";
             statusBox.Controls.Add(status);
 
-            StyleButton(test, "测试连接", new Rectangle(24, 478, 128, 44), false);
-            StyleButton(save, "保存设置", new Rectangle(166, 478, 128, 44), false);
-            StyleButton(launch, "启动一次", new Rectangle(308, 478, 128, 44), false);
-            StyleButton(setup, "配置启动图标", new Rectangle(450, 478, 246, 44), true);
-            test.TabIndex = 4; save.TabIndex = 5; launch.TabIndex = 6; setup.TabIndex = 7;
-            Controls.Add(test); Controls.Add(save); Controls.Add(launch); Controls.Add(setup);
+            StyleButton(test, "测试连接", new Rectangle(164, 478, 140, 44), false);
+            StyleButton(save, "保存设置", new Rectangle(318, 478, 140, 44), false);
+            StyleButton(launch, "保存并启动", new Rectangle(472, 478, 224, 44), true);
+            test.TabIndex = 4; save.TabIndex = 5; launch.TabIndex = 6;
+            Controls.Add(test); Controls.Add(save); Controls.Add(launch);
             test.Click += async delegate { await TestConnection(); };
             launch.Click += async delegate { await LaunchApp(); };
             save.Click += delegate { SaveSettings(); };
-            setup.Click += delegate { ConfigureShortcuts(); };
-            MakeLabel(this, "修改配置：双击本工具，或在开始菜单搜索“Antigravity 代理设置”。", 25, 539, 670, 25, Muted, 9F, false);
-            AcceptButton = setup;
+            MakeLabel(this, "每次从本工具启动。启动成功后自动关闭；修改地址或端口后保存即可。", 25, 539, 670, 25, Muted, 9F, false);
+            AcceptButton = launch;
         }
 
         private Settings ReadSettings()
@@ -361,7 +358,7 @@ namespace AntigravityProxyLauncher
         private void SetBusy(bool value)
         {
             busy = value;
-            browse.Enabled = test.Enabled = launch.Enabled = save.Enabled = setup.Enabled = appPath.Enabled = host.Enabled = port.Enabled = !value;
+            browse.Enabled = test.Enabled = launch.Enabled = save.Enabled = appPath.Enabled = host.Enabled = port.Enabled = !value;
             UseWaitCursor = value;
         }
 
@@ -372,23 +369,10 @@ namespace AntigravityProxyLauncher
                 Settings settings = ReadSettings();
                 Launcher.CreateStartInfo(settings);
                 settingsStore.Save(settings);
-                ShowStatus("设置已保存。已配置的代理启动图标下次会自动使用新设置。", true, false);
+                ShowStatus("设置已保存，下次打开本工具时自动读取。", true, false);
             } catch (Exception error) { ShowStatus(error.Message, false, true); }
         }
 
-        private void ConfigureShortcuts()
-        {
-            if (busy) return;
-            try {
-                Settings settings = ReadSettings();
-                SetBusy(true);
-                ShortcutSetup.Configure(settings, settingsStore, Application.ExecutablePath,
-                    Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-                    Environment.GetFolderPath(Environment.SpecialFolder.Programs));
-                ShowStatus("已配置完成！以后点击桌面“Antigravity（代理）”即可静默启动。修改设置可从开始菜单打开“Antigravity 代理设置”。", true, false);
-            } catch (Exception error) { ShowStatus(error.Message, false, true); }
-            finally { SetBusy(false); }
-        }
         private async Task TestConnection()
         {
             if (busy) return;
@@ -414,7 +398,7 @@ namespace AntigravityProxyLauncher
                 bool alreadyRunning = running.Length != 0;
                 foreach (Process process in running) process.Dispose();
                 if (alreadyRunning) {
-                    ShowStatus("Antigravity 已在运行。请保存工作并完全退出，再点击“启动一次”。", false, true);
+                    ShowStatus("Antigravity 已在运行。请保存工作并完全退出，再点击“保存并启动”。", false, true);
                     return;
                 }
                 SetBusy(true);
@@ -437,15 +421,10 @@ namespace AntigravityProxyLauncher
     internal static class Program
     {
         [STAThread]
-        private static void Main(string[] args)
+        private static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            bool silent = Array.Exists(args, delegate(string arg) { return String.Equals(arg, "--launch", StringComparison.OrdinalIgnoreCase); });
-            if (silent) {
-                try { SilentStart.Start(SettingsStore.ForCurrentUser()); return; }
-                catch (Exception error) { Application.Run(new MainForm(error.Message)); return; }
-            }
             Application.Run(new MainForm());
         }
     }
